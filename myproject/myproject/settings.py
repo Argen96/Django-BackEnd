@@ -71,8 +71,9 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'rest_framework',
-                 'rest_framework.authtoken',
-                'django.contrib.sessions'
+               'rest_framework.authtoken',
+               'rest_framework_simplejwt',
+               'corsheaders'
             ],
         },
     },

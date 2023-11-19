@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
 from django.http import JsonResponse
+from datetime import timedelta 
 from django.contrib.auth.hashers import check_password
 from .models import CustomUser  
 import json
@@ -36,8 +37,8 @@ def signup(request):
 
 from traceback import print_exc
 
-# myapp/views.py
 from django.http import Http404
+from rest_framework_simplejwt.tokens import RefreshToken
 
 @api_view(['POST'])
 def user_login(request):
@@ -46,19 +47,25 @@ def user_login(request):
         password = request.data.get('password')
 
         try:
-            # Authenticate using both email and password
             user = authenticate(request, email=email, password=password)
 
             if user is not None and check_password(password, user.password):
                 login(request, user)
 
-                # Get existing token or create a new one
-                try:
-                    token = Token.objects.get(user=user)
-                except Token.DoesNotExist:
-                    token = Token.objects.create(user=user)
+                # Generate a refresh token
+                refresh = RefreshToken.for_user(user)
 
-                return Response({'status': 'success', 'token': token.key, 'user_id': user.id})
+                # Set the expiration time for the access token (adjust as needed)
+                access_token = refresh.access_token
+                access_token.set_exp(lifetime=timedelta(hours=1))  # Set expiration time (adjust as needed)
+
+                # Include user_id in the token
+                token_payload = {
+                    'token': str(access_token),
+                    'user_id': user.id,
+                }
+
+                return Response({'status': 'success', 'data': token_payload})
             else:
                 return Response({'status': 'error', 'message': 'Invalid login credentials'})
         except Exception as e:
@@ -66,5 +73,3 @@ def user_login(request):
             return Response({'status': 'error', 'message': 'An error occurred during login'})
     else:
         return Response({'status': 'error', 'message': 'Invalid request method'})
-
-
