@@ -1,19 +1,21 @@
-# myapp/models.py
-from django.contrib.auth.models import AbstractUser, Group, Permission
+from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.conf import settings
+from django.utils import timezone
+
+
+
+class Token(models.Model):
+    key = models.CharField(max_length=40, primary_key=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='myapp_auth_token', on_delete=models.CASCADE)
+    created = models.DateTimeField(default=timezone.now)
+
 
 class CustomUser(AbstractUser):
-    # Add any additional fields you need
-    # For example:
-    # bio = models.TextField(blank=True)
-
-    # Add related_name to avoid clashes with auth.User model
-    groups = models.ManyToManyField(Group, related_name='customuser_set', blank=True)
-    user_permissions = models.ManyToManyField(Permission, related_name='customuser_set', blank=True)
-
+    username = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
-    USERNAME_FIELD = 'email'  # Use the email field for authentication
-    REQUIRED_FIELDS = []  # Remove 'email' from the REQUIRED_FIELDS list
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
 
     def __str__(self):
-        return self.email  # You can customize this based on your preference
+        return self.email

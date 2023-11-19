@@ -51,8 +51,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware'
+    'corsheaders.middleware.CorsMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware'
 ]
+
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'myproject.urls'
 
@@ -68,7 +71,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'rest_framework',
-                'rest_framework.authtoken',
+                 'rest_framework.authtoken',
+                'django.contrib.sessions'
             ],
         },
     },
@@ -83,6 +87,8 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ],
 }
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 WSGI_APPLICATION = 'myproject.wsgi.application'
 AUTH_USER_MODEL = 'myapp.CustomUser'
