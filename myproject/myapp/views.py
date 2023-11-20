@@ -13,7 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import CustomUser, Post, Comment
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
-from .serializers import PostSerializer, CommentSerializer
+from .serializers import PostSerializer
 from rest_framework.views import APIView
 import json
 
@@ -117,18 +117,6 @@ class PostUpdateView(APIView):
             return Response({'status': 'error', 'message': 'Permission denied. User is not the owner of the post.'}, status=status.HTTP_403_FORBIDDEN)
 
 
-class CommentListCreateView(generics.ListCreateAPIView):
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        token = self.request.auth
-        user_id = token.payload.get('user_id')
-        serializer.validated_data['author_id'] = user_id  
-        serializer.save(post_id=self.kwargs['post_id'])
-
-        return Response({'status': 'success', 'message': 'Comment created successfully'}, status=status.HTTP_201_CREATED)
 
 
 
