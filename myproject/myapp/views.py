@@ -7,12 +7,14 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
 from django.http import JsonResponse
 from datetime import timedelta 
+from django.shortcuts import get_object_or_404
 from traceback import print_exc
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import CustomUser, Post, Comment
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from .serializers import PostSerializer, CommentSerializer
+from rest_framework.views import APIView
 import json
 
 @csrf_exempt
@@ -24,10 +26,7 @@ def signup(request):
             username = data.get('username')
             email = data.get('email')
             password = data.get('password')
-
-            # Hash the password using make_password
-            hashed_password = make_password(password)
-            
+            hashed_password = make_password(password) 
             user = CustomUser(username=username, email=email, password=hashed_password)
             user.save()
 
@@ -48,15 +47,9 @@ def user_login(request):
 
             if user is not None and check_password(password, user.password):
                 login(request, user)
-
-                # Generate a refresh token
                 refresh = RefreshToken.for_user(user)
-
-                # Set the expiration time for the access token (adjust as needed)
                 access_token = refresh.access_token
-                access_token.set_exp(lifetime=timedelta(hours=10))  # Set expiration time (adjust as needed)
-
-                # Include user_id in the token
+                access_token.set_exp(lifetime=timedelta(hours=10))  
                 token_payload = {
                     'token': str(access_token),
                     'user_id': user.id,
@@ -66,7 +59,7 @@ def user_login(request):
             else:
                 return Response({'status': 'error', 'message': 'Invalid login credentials'})
         except Exception as e:
-            print_exc()  # Print the traceback
+            print_exc()  
             return Response({'status': 'error', 'message': 'An error occurred during login'})
     else:
         return Response({'status': 'error', 'message': 'Invalid request method'})
@@ -76,44 +69,52 @@ class PostListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Access the token from the request
         token = self.request.auth
-
-        # Use the token as needed (e.g., extract user_id)
         user_id = token.payload.get('user_id')
-
-        # Filter the queryset to get only the posts associated with the current user
         queryset = Post.objects.filter(author_id=user_id)
         return queryset
 
     def perform_create(self, serializer):
-        # Access the token from the request
         token = self.request.auth
-
-        # Use the token as needed (e.g., extract user_id)
         user_id = token.payload.get('user_id')
-
-        # Set the author field directly in the serializer
-        serializer.validated_data['author_id'] = user_id  # Assuming 'author_id' is the correct field in your serializer
+        serializer.validated_data['author_id'] = user_id  
         serializer.save()
 
         return Response({'status': 'success', 'message': 'Post created successfully'}, status=status.HTTP_201_CREATED)
 
-class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
+
+class PostDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
+    def delete(self, request, pk):
+        token = request.auth
+        user_id = token.payload.get('user_id')
+        post = get_object_or_404(Post, pk=pk)
 
-        # Check if the user making the request is the owner of the post
-        if request.user != instance.author:
-            return Response({'status': 'error', 'message': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        if user_id == post.author.id:
+            post.delete()
+            return Response({'status': 'success', 'message': 'Post deleted successfully'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'status': 'error', 'message': 'Permission denied. User is not the owner of the post.'}, status=status.HTTP_403_FORBIDDEN)
 
-        self.perform_destroy(instance)
-        return Response({'status': 'success', 'message': 'Post deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
+
+class PostUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, post_id):
+
+        token = request.auth
+        user_id = token.payload.get('user_id')
+        post = get_object_or_404(Post, pk=post_id)
+        if user_id == post.author.id:
+            serializer = PostSerializer(post, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'status': 'error', 'message': 'Permission denied. User is not the owner of the post.'}, status=status.HTTP_403_FORBIDDEN)
 
 
 class CommentListCreateView(generics.ListCreateAPIView):
@@ -122,14 +123,9 @@ class CommentListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        # Access the token from the request
         token = self.request.auth
-
-        # Use the token as needed (e.g., extract user_id)
         user_id = token.payload.get('user_id')
-
-        # Set the author field directly in the serializer
-        serializer.validated_data['author_id'] = user_id  # Assuming 'author_id' is the correct field in your serializer
+        serializer.validated_data['author_id'] = user_id  
         serializer.save(post_id=self.kwargs['post_id'])
 
         return Response({'status': 'success', 'message': 'Comment created successfully'}, status=status.HTTP_201_CREATED)

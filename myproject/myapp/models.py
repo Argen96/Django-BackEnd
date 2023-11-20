@@ -35,20 +35,29 @@ class Comment(models.Model):
 
 class PostListCreateView(generics.ListCreateAPIView):
     queryset = Post.objects.all()
-    serializer_class = 'myapp.serializers.PostSerializer'  # Corrected import
+    serializer_class = 'myapp.serializers.PostSerializer'  
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
         from .serializers import PostSerializer
-        # Associate the post with the current user
+
         serializer.save(author=self.request.user)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
+from .models import Post
+from .serializers import PostSerializer
+
 
 class CommentListCreateView(generics.ListCreateAPIView):
     queryset = Comment.objects.all()
-    serializer_class = 'myapp.serializers.CommentSerializer'  # Corrected import
+    serializer_class = 'myapp.serializers.CommentSerializer'  
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
         from .serializers import CommentSerializer
-        # Associate the comment with the current user and post
+
         serializer.save(author=self.request.user, post_id=self.kwargs['post_id'])
